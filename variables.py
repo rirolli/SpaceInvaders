@@ -14,7 +14,10 @@ alpha = 0.00025     # 0 <  a <= 1  learnig rate
 memory_size = 1000000   # numero massimo di esperienze che la memoria può memorizzare
 
 # RIPRISTINARE SALVATAGGIO DI APPRENDIMENTO
-resume = False
+load_model = True
+
+# ABILITA IMPOSTAZIONI CLUSTER
+cluster = False
 
 # PATH
 model_path = './models/model'

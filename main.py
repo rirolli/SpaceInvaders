@@ -30,6 +30,7 @@ tf.reset_default_graph()    # resetta il grafico
 rewards = []                # una lista di reward
 step = 0                    # inizializza gli step
 start = time.time()         # inizializza il tempo di inizio
+episode_frames = []         # memorizza tutti i frames dell'episodio per creare una GIF
 
 for episode in range(total_episodes):
 
@@ -41,12 +42,13 @@ for episode in range(total_episodes):
 
     while True:
 
-        if episode_render:
+        if episode_render and not cluster:
             env.render()
 
         action = agent.run(state=state)
 
         next_state, reward, done, _ = env.step(action=action)
+
         next_state, stacked_frames = frameH.stack_frames(stacked_frames, next_state, False)
 
         agent.add(experience=(state, next_state, action, reward, done))

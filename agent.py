@@ -6,11 +6,11 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 from collections import deque
 
-from variables import tensorboard_path, model_path, load_models_path
+from variables import tensorboard_path, model_path, load_models_path, load_model
 
 
 class DQNAgent:
-    def __init__(self, state_size, action_space, learning_rate, gamma, max_memory, double_q, load_model=True):
+    def __init__(self, state_size, action_space, learning_rate, gamma, max_memory, double_q):
         self.state_size = state_size
         self.action_space = action_space
         self.learning_rate = learning_rate

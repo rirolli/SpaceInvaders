@@ -1,4 +1,5 @@
 import numpy as np
+import moviepy.editor as mpy
 
 from collections import deque
 
@@ -30,3 +31,17 @@ class FrameHelper:
 
         return stacked_state, stacked_frames
 
+'''
+def frame_skip(env, num_frames_skipped, action):
+    R = 0
+
+    for t in range(num_frames_skipped):
+        next_state, reward, done, _ = env.step(action)
+        R += reward
+        if done:
+            return next_state, R, done
+
+    next_state, reward, done, _ = env.step(action)
+    R += reward
+    return next_state, R, done
+'''

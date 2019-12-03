@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J SI_1
+#SBATCH -J SpaceInvaders
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
 #SBATCH --mem-per-cpu=1600mb 
@@ -9,4 +9,4 @@
 module purge
 module load mpi/mpich-x86_64
 
-srun --mpi=pmi2 python main.py 2> err
+srun --mpi=pmi2 python3 main.py 2> err
