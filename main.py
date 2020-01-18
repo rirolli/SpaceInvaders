@@ -1,87 +1,109 @@
-import gym              # palestra di allenamento
-import tensorflow as tf # libreria di Deep Learning
-import numpy as np      # Manipolazione matrici
-import time
+import gym
+import tensorflow as tf
+from tensorflow import keras
+import random
+import numpy as np
+import datetime as dt
 
-from collections import deque
-
-from FrameHelper import FrameHelper
-from agent import DQNAgent
+from costants import *
+from model import DQModel
+from memory import Memory
 from wrappers import inizialize_wrapper
 
-from variables import *     # Contiene tutte le costanti e gli hyperparametri
 
-# INIZIALIZZAZIONE AMBIENTE DI GIOCO
-env = gym.make(env_name)
-env = inizialize_wrapper(env)
+env = gym.make(ENV_NAME)
+env = inizialize_wrapper(env=env, frame_skip=1, frame_height=POST_PROCESS_IMAGE_SIZE[0],
+                         frame_width=POST_PROCESS_IMAGE_SIZE[1], record_path=RECORD_PATH)
+num_actions = env.action_space.n
 
-# parametri d'ambiente
-action_space = env.action_space.n   # 6
-obs_space = env.observation_space   # Box(210, 160, 3) non processato!
+online_network = DQModel(256, num_actions)
+target_network = DQModel(256, num_actions)
+online_network.compile(optimizer=keras.optimizers.Adam(), loss='mse')
+# rendi target_network = primary_network
+for t, e in zip(target_network.trainable_variables, online_network.trainable_variables):
+    t.assign(e)
 
-# INIZIALIZZAZIONI CLASSI
-frameH = FrameHelper(stack_size=stack_size)
-agent = DQNAgent(state_size=frame_space_processed, action_space=action_space, max_memory=memory_size,
-                 learning_rate=alpha, gamma=gamma, double_q=True)
+online_network.compile(optimizer=keras.optimizers.Adam(), loss=tf.keras.losses.Huber())
+
+memory = Memory(50000)
 
 
-stacked_frames = deque([np.zeros((84, 84), dtype=np.int) for i in range(stack_size)], maxlen=4) # creazione di uno stack di frame VUOTO
-tf.reset_default_graph()    # resetta il grafico
-rewards = []                # una lista di reward
-step = 0                    # inizializza gli step
-start = time.time()         # inizializza il tempo di inizio
-episode_frames = []         # memorizza tutti i frames dell'episodio per creare una GIF
+def linear_eps_decay(steps: int):
+    if steps < EPSILON_MIN_ITER:
+        eps = MAX_EPSILON - ((steps - DELAY_TRAINING) / EPSILON_MIN_ITER) * (MAX_EPSILON - MIN_EPSILON)
+    else:
+        eps = MIN_EPSILON
+    return eps
 
-for episode in range(total_episodes):
 
+def choose_action(state, primary_network, eps, step):
+    if step < DELAY_TRAINING:
+        return random.randint(0, num_actions - 1)
+    else:
+        if random.random() < eps:
+            return random.randint(0, num_actions - 1)
+        else:
+            return np.argmax(primary_network(tf.reshape(state, (1, POST_PROCESS_IMAGE_SIZE[0],
+                                                                POST_PROCESS_IMAGE_SIZE[1], NUM_FRAMES)).numpy()))
+
+
+def process_state_stack(state_stack, state):
+    for i in range(1, state_stack.shape[-1]):
+        state_stack[:, :, i - 1].assign(state_stack[:, :, i])
+    state_stack[:, :, -1].assign(state[:, :, 0])
+    return state_stack
+
+
+eps = MAX_EPSILON
+train_writer = tf.summary.create_file_writer(STORE_PATH + f"/DuelingQSI_{dt.datetime.now().strftime('%d%m%Y%H%M')}")
+steps = 0
+
+print(f"\n -- Creazione file di Tensorboard-log: \"{STORE_PATH}/DuelingQSI_{dt.datetime.now().strftime('%d%m%YH%M')}\" -- \n")
+print(f" -- Allenamento iniziato in data: {dt.datetime.now().strftime('%d%m%Y%H%M')} -- ")
+
+for i in range(NUM_EPISODES):
     state = env.reset()
-    state, stacked_frames = frameH.stack_frames(stacked_frames, state, True)
-
-    total_reward = 0
-    iter = 0
-
+    state_stack = tf.Variable(np.repeat(state, NUM_FRAMES).reshape((POST_PROCESS_IMAGE_SIZE[0],
+                                                                    POST_PROCESS_IMAGE_SIZE[1],
+                                                                    NUM_FRAMES)))
+    cnt = 1
+    avg_loss = 0
+    tot_reward = 0
     while True:
-
-        if episode_render and not cluster:
+        if RENDER:
             env.render()
+        action = choose_action(state_stack, online_network, eps, steps)
+        next_state, reward, done, info = env.step(action)
+        tot_reward += reward
+        state_stack = process_state_stack(state_stack, next_state)
+        # salva in memory il nuovo stato
+        memory.add_sample(frame=next_state, action=action, reward=reward, done=done)
 
-        action = agent.run(state=state)
+        if steps > DELAY_TRAINING:
+            loss = online_network.train_model(memory, target_network)
+            online_network.update_network(target_network)
+            with train_writer.as_default():
+                tf.summary.scalar('loss', loss, step=steps)
+        else:
+            loss = -1
+        avg_loss += loss
 
-        next_state, reward, done, _ = env.step(action=action)
+        # decresce il valore di eps in modo lineare
+        if steps > DELAY_TRAINING:
+            eps = linear_eps_decay(steps=steps)
 
-        next_state, stacked_frames = frameH.stack_frames(stacked_frames, next_state, False)
-
-        agent.add(experience=(state, next_state, action, reward, done))
-
-        agent.learn()
-
-        total_reward += reward
-
-        state = next_state
-
-        iter += 1
+        steps += 1
 
         if done:
+            if steps > DELAY_TRAINING:
+                avg_loss /= cnt
+                print(f"Episodio: {i}, Reward: {tot_reward}, avg loss: {avg_loss:.5f}, eps: {eps:.3f}")
+                with train_writer.as_default():
+                    tf.summary.scalar('reward', tot_reward, step=i)
+                    tf.summary.scalar('avg loss', avg_loss, step=i)
+                    tf.summary.scalar('eps', eps, step=i)
+            else:
+                print(f"Pre-training...Episodio: {i}")
             break
 
-    rewards.append(total_reward/iter)
-
-    if episode % 25 == 0:
-        print('Episode {e} - '
-              'Frame {f} - '
-              'Frames/sec {fs} - '
-              'Epsilon {eps} - '
-              'Mean Reward {r}'.format(e=episode,
-                                       f=agent.step,
-                                       fs=np.round((agent.step - step) / (time.time() - start)),
-                                       eps=np.round(agent.eps, 4),
-                                       r=np.mean(rewards[-100:])))
-        start = time.time()
-        step = agent.step
-
-    np.save('rewards.npy', rewards)
-
-env.close()
-
-
-
+        cnt += 1
