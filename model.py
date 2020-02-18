@@ -3,12 +3,13 @@ import numpy as np
 
 from tensorflow import keras
 
-from costants import GAMMA, TAU, BATCH_SIZE
+from costants import GAMMA, TAU, BATCH_SIZE, CKPT_PATH
 
 
 class DQModel(keras.Model):
-    def __init__(self, hidden_size: int, num_actions: int):
+    def __init__(self, hidden_size: int, num_actions: int, str_name: str):
         super(DQModel, self).__init__()
+        self.str_name = str_name.lower()
         self.conv1 = keras.layers.Conv2D(16, (8, 8), (4, 4), activation='relu')
         self.conv2 = keras.layers.Conv2D(32, (4, 4), (2, 2), activation='relu')
         self.flatten = keras.layers.Flatten()
@@ -45,7 +46,7 @@ class DQModel(keras.Model):
         prim_qt = self.call(input=states)
         # predice Q(s',a') con la online_network
         prim_qtp1 = self.call(input=next_states)
-        # copy the prim_qt tensor into the target_q tensor - we then will update one index corresponding to the max action
+        # copia il tensore prim_qt nel tensore target_q - aggiorneremo quindi un indice corrispondente all'azione massima
         target_q = prim_qt.numpy()
         updates = rewards
         valid_idxs = done != True
@@ -60,5 +61,5 @@ class DQModel(keras.Model):
         loss = self.train_on_batch(states, target_q)
         return loss
 
-
-
+    def get_name(self):
+        return self.str_name

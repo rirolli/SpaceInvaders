@@ -103,7 +103,7 @@ class ScaledFloatFrame(gym.ObservationWrapper):
 
 def inizialize_wrapper(env, frame_skip: int, frame_width: int, frame_height: int, record_path: str):
     """ Applica un set di wrappers per i giochi Atari"""
-    env = Monitor(env=env, directory=record_path, force=True)
+    env = Monitor(env=env, directory=record_path, resume=True)
     env = MaxAndSkipEnv(env=env, skip=frame_skip)
     env = WarpFrame(env=env, width=frame_width, height=frame_height)
     env = ScaledFloatFrame(env=env)
