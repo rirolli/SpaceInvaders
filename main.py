@@ -1,7 +1,7 @@
 import gym
+import random
 import tensorflow as tf
 from tensorflow import keras
-import random
 import numpy as np
 import datetime as dt
 
@@ -81,6 +81,7 @@ for i in range(NUM_EPISODES):
     cnt = 1
     avg_loss = 0
     tot_reward = 0
+    images = [] #
     while True:
         if RENDER:
             env.render()
@@ -117,8 +118,8 @@ for i in range(NUM_EPISODES):
                     tf.summary.scalar('eps', eps, step=episode)
 
                 if episode % SAVE_EACH == 0 and SAVE:
+                    saver.save_models(episode, online_network, target_network)
                     saver.save_parameters(total_steps=total_steps, episode=episode, eps=eps, session=session)
-                    saver.save_models(online_network, target_network)
                 episode += 1
             else:
                 print(f"Pre-training...Episodio: {i}")
@@ -128,5 +129,5 @@ for i in range(NUM_EPISODES):
 
 # Quando finisce il numero degli episodi allora salva un checkpoint
 if SAVE:
+    saver.save_models(episode, online_network, target_network)
     saver.save_parameters(total_steps=total_steps, episode=episode, eps=eps)
-    saver.save_models(online_network, target_network)

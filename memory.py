@@ -12,16 +12,6 @@ class Memory:
         self._done = np.zeros(max_memory, dtype=np.bool)
         self._i = 0
 
-    def restore_memory(self, actions, rewards, frames, done, i):
-        self._actions = actions
-        self._rewards = rewards
-        self._frames = frames
-        self._done = done
-        self._i = i
-
-    def get_memory(self):
-        return self._actions, self._rewards, self._frames, self._done, self._i
-
     def add_sample(self, frame, action, reward, done):
         self._actions[self._i] = action
         self._rewards[self._i] = reward
@@ -32,7 +22,7 @@ class Memory:
         else:
             self._i += 1
 
-    def sample(self):
+    def get_samples(self):
         if self._i < BATCH_SIZE + NUM_FRAMES + 1:
             raise ValueError("Non ci sono abbastanza dati in memoria per estrarne uno.")
         else:
@@ -45,3 +35,13 @@ class Memory:
                 states[i] = self._frames[:, :, idx - 1 - NUM_FRAMES:idx - 1]
                 next_states[i] = self._frames[:, :, idx - NUM_FRAMES:idx]
             return states, self._actions[rand_idxs], self._rewards[rand_idxs], next_states, self._done[rand_idxs]
+
+    def restore_memory(self, actions, rewards, frames, done, i):
+        self._actions = actions
+        self._rewards = rewards
+        self._frames = frames
+        self._done = done
+        self._i = i
+
+    def get_memory(self):
+        return self._actions, self._rewards, self._frames, self._done, self._i

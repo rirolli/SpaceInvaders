@@ -3,14 +3,15 @@ import numpy as np
 
 from tensorflow import keras
 
-from costants import GAMMA, TAU, BATCH_SIZE, CKPT_PATH
+from costants import GAMMA, TAU, BATCH_SIZE
 
 
 class DQModel(keras.Model):
     def __init__(self, hidden_size: int, num_actions: int, str_name: str):
         super(DQModel, self).__init__()
         self.str_name = str_name.lower()
-        self.conv1 = keras.layers.Conv2D(16, (8, 8), (4, 4), activation='relu')
+        self.conv1 = keras.layers.Conv2D(16, (8, 8), (4, 4),
+                                         activation='relu')
         self.conv2 = keras.layers.Conv2D(32, (4, 4), (2, 2), activation='relu')
         self.flatten = keras.layers.Flatten()
         self.adv_dense = keras.layers.Dense(hidden_size, activation='relu',
@@ -41,7 +42,7 @@ class DQModel(keras.Model):
             t.assign(t * (1 - TAU) + e * TAU)
 
     def train_model(self, memory, target_network=None):
-        states, actions, rewards, next_states, done = memory.sample()
+        states, actions, rewards, next_states, done = memory.get_samples()
         # predice Q(s,a) dato un batch di stati (state)
         prim_qt = self.call(input=states)
         # predice Q(s',a') con la online_network
