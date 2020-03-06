@@ -1,8 +1,12 @@
 import os
 import shutil
 
+import tensorflow as tf
+import datetime as dt
+
 from model import DQModel
 from json_helper import JsonHelper
+from costants import MAX_EPSILON
 
 
 class Saver:
@@ -14,17 +18,18 @@ class Saver:
     def save_models(self, episode: int, *models: DQModel):
         for model in models:
             try:
-                model.save_weights(self.ckpt_path.format(type=model.get_name(), epoch=episode))
+                model.reset_metrics()
+                model.save_weights(self.ckpt_path.format(type=model.get_name()) + f"/cp-{episode:04d}", save_format='tf')
                 print(f'--- MODELLO {model.get_name()} salvato con successo ---')
             except Exception as err:
                 print(f"--- Non è stato possibile salvare il MODELLO {model.get_name()} ---\n", err)
 
     def load_models(self, *models: DQModel):
-        last_episode, _, _, _ = self.parameters_helper.load_parameters()
         for model in models:
+            last_ckpt = tf.train.latest_checkpoint(self.ckpt_path.format(type=model.get_name()))
             try:
-                model.load_weights(self.ckpt_path.format(type=model.get_name(), epoch=last_episode))
-                print(f"--- MODELLO {model.get_name()} caricato con successo ---")
+                model.load_weights(last_ckpt)
+                print(f"--- MODELLO {model.get_name()} (ckeckpoint: {last_ckpt}) caricato con successo ---")
             except Exception as err:
                 print(f"--- Non è stato possibile caricare il MODELLO {model.get_name()} ---\n", err)
 

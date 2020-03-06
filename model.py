@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 
 from tensorflow import keras
-
 from costants import GAMMA, TAU, BATCH_SIZE
 
 

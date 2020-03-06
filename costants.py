@@ -18,10 +18,13 @@ DELAY_TRAINING = 50000
 # PATH DI SALVATAGGIO
 STORE_PATH = "TensorBoard/DuelingQSI_{session}"
 RECORD_PATH = "./recording/Record_{session}"
-CKPT_PATH = "./checkpoints/{type}Network/cp-{epoch:04d}.ckpt"
+GIF_PATH = "./recording/gif_{session}/gif-{episode}.gif"
+CKPT_PATH = "./checkpoints/{type}Network"
 PARAMETERS_PATH = "./checkpoints/parameters.txt"
 
+TRAIN = False
+
 # SALVATAGGIO
-LOAD = True
+LOAD = False
 SAVE = True
 SAVE_EACH = 1
